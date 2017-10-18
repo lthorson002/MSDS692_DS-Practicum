@@ -11,6 +11,7 @@ library(seewave)
 library(warbleR)
 library(soundecology)
 library(plyr)
+library(ggplot2)
 
 #..#SpecAnalyze Function - Process Sound (.wav) files
 
@@ -72,7 +73,7 @@ SpecAnalyzehb <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 
     #read 20sec of .wav file
     r <- tuneR::readWave(file.path(getwd(), sound.files[i]), from = start[i], to = 20, units = "seconds") 
     
-    #195hz lowpass noise filter
+    #195 Hz lowpass noise filter
     r <- bwfilter(r, 22050, n = 3, from = 195, bandpass = TRUE, listen = FALSE, output = "Wave")
     
     b <- bp #in case bp its higher than can be due to sampling rate
@@ -90,22 +91,27 @@ SpecAnalyzehb <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 
 #Waveform Characterization - Soundecology Package
     
     ##Calculate the Normalized Difference Soundscape Index (NDSI)
-    spec100 <- soundscapespec(r, plot=FALSE)
-    sound_indx <- 0#seewave::NDSI(r, biophony = 2:8)
+    #sound_indx <- ndsi(r, fft_w = 512, anthro_min = 0, anthro_max = 198, bio_min = 200, bio_max = 1800)
     
     ##Calculate the Bioacoustic Index
     bio_ind <- bioacoustic_index(r, min_freq = 0, max_freq = 2000, fft_w = 512)
     bio_ind_L <- (bio_ind$left_area)
     
     #Calculate the Acoustic Diversity Index (ADI)
-    ad_result <- acoustic_diversity(r, max_freq = 2000)
+    #ad_result <- acoustic_diversity(r, max_freq = 2000)
+    ad_result <- acoustic_diversity(r, max_freq = 2000, db_threshold = -50, freq_step = 10, shannon = TRUE)
     ad_result_L <- (ad_result$adi_left)
+    
     
     ##Calcualte the Acoustic Evenness Index (AEI)
     ae_result <- acoustic_evenness(r)
     ae_result_L <- (ae_result$aei_left)
     
 #Waveform Characterization - Seewave Package
+    
+    #spec100 <- soundscapespec(r, plot=TRUE)
+    #sound_indx <- seewave::NDSI(spec100, biophony = 1:2)
+    
     
     ##count the number of zero crossings in the waveform 
     zX <- zcr(r, wl=NULL)
@@ -120,9 +126,9 @@ SpecAnalyzehb <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 
     ACI <- ACI(r)
     
     #Perform frequency spectrum analysis
-    songspec <- seewave::spec(r, f = r@samp.rate, plot = FALSE)
+    songspec <- seewave::spec(r, f = r@samp.rate, plot = TRUE)
     
-    ## Compute Shannon spectral entropyL noisy signal -> 1; pure tone signal -> 0
+    ## Compute Shannon spectral entropy: noisy signal -> 1; pure tone signal -> 0
     sh <- sh(songspec)    
     
     ##Determine the statistical properties of a frequency spectrum
@@ -142,17 +148,17 @@ SpecAnalyzehb <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 
     mode <- analysis$mode/1000
     centroid <- analysis$cent/1000
     
-    ##Determine Frequency with amplitude peaks (zeroed out as it takes a long time)
-    peakf <- 0 #seewave::fpeaks(songspec, f = r@samp.rate, wl = wl, nmax = 3, plot = FALSE)[1, 1]
+    ##Determine Frequency with amplitude peaks 
+    peakf <- seewave::fpeaks(songspec, f = r@samp.rate, wl = wl, nmax = 2, plot = TRUE)[1, 1]
     
-    ##DetermineFundamental frequency parameters
+    ##Determine Fundamental frequency parameters
     ff <- seewave::fund(r, f = r@samp.rate, ovlp = 50, threshold = threshold, 
                         fmax = 280, ylim=c(0, 280/1000), plot = FALSE, wl = wl)[, 2]
     meanfun<-mean(ff, na.rm = T)
     minfun<-min(ff, na.rm = T)
     maxfun<-max(ff, na.rm = T)
     
-#Determine Dominant frecuency parameters
+#Determine Dominant frequency parameters
     y <- seewave::dfreq(r, f = r@samp.rate, wl = wl, ylim=c(0, 280/1000), ovlp = 0, plot = F, threshold = threshold, 
                         bandpass = b * 1000, fftw = TRUE)[, 2]
     meandom <- mean(y, na.rm = TRUE)
@@ -162,7 +168,7 @@ SpecAnalyzehb <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 
     duration <- (end[i] - start[i])
     
     
-    #Calculate Modulation Index
+#Calculate Modulation Index
     changes <- vector()
     for(j in which(!is.na(y))){
       change <- abs(y[j] - y[j + 1])
@@ -170,17 +176,10 @@ SpecAnalyzehb <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 
     }
     if(mindom==maxdom) modindx<-0 else modindx <- mean(changes, na.rm = T)/dfrange
     
-        #Frequency with amplitude peaks
-    peakf <- 0 #seewave::fpeaks(songspec, f = r@samp.rate, wl = wl, nmax = 3, plot = FALSE)[1, 1]
+    #Frequency with amplitude peaks
+    peakf <- seewave::fpeaks(songspec, f = r@samp.rate, wl = wl, nmax = 3, plot = FALSE)[1, 1]
     
-    #Fundamental frequency parameters
-    ff <- seewave::fund(r, f = r@samp.rate, ovlp = 50, threshold = threshold, 
-                        fmax = 280, ylim=c(0, 280/1000), plot = FALSE, wl = wl)[, 2]
-    meanfun<-mean(ff, na.rm = T)
-    minfun<-min(ff, na.rm = T)
-    maxfun<-max(ff, na.rm = T)
-    
-    #Dominant frecuency parameters
+#Dominant frecuency parameters
     y <- seewave::dfreq(r, f = r@samp.rate, wl = wl, ylim=c(0, 280/1000), ovlp = 0, plot = F, threshold = threshold, 
                         bandpass = b * 1000, fftw = TRUE)[, 2]
     meandom <- mean(y, na.rm = TRUE)
@@ -190,7 +189,7 @@ SpecAnalyzehb <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 
     duration <- (end[i] - start[i])
     
     
-    #modulation index calculation
+#modulation index calculation
     changes <- vector()
     for(j in which(!is.na(y))){
       change <- abs(y[j] - y[j + 1])
@@ -200,11 +199,11 @@ SpecAnalyzehb <- function(X, bp = c(0,22), wl = 2048, threshold = 5, parallel = 
     
     #save results
     return(c(duration, meanfreq, sd, median, Q25, Q75, IQR, skew, kurt, sp.ent, sfm, mode, 
-             centroid, peakf, meanfun, minfun, maxfun, meandom, mindom, maxdom, dfrange, modindx, m, H,ACI, zX, sh, sound_indx, bio_ind_L, ad_result_L, ae_result_L))
+             centroid, peakf, meanfun, minfun, maxfun, meandom, mindom, maxdom, dfrange, modindx, m, H,ACI, zX, sh, bio_ind_L, ad_result_L, ae_result_L))
   }))
   
   #Organize above results
-  rownames(x) <- c("duration", "meanfreq", "sd", "median", "Q25", "Q75", "IQR", "skew", "kurt", "sp.ent", "sfm","mode", "centroid", "peakf", "meanfun", "minfun", "maxfun", "meandom", "mindom", "maxdom", "dfrange", "modindx", "m", "H", "ACI", "zX", "sh", "sound_indx", "bio_ind_L", "ad_result_L", "ae_result_L")
+  rownames(x) <- c("duration", "meanfreq", "sd", "median", "Q25", "Q75", "IQR", "skew", "kurt", "sp.ent", "sfm","mode", "centroid", "peakf", "meanfun", "minfun", "maxfun", "meandom", "mindom", "maxdom", "dfrange", "modindx", "m", "H", "ACI", "zX", "sh", "bio_ind_L", "ad_result_L", "ae_result_L")
   x <- data.frame(sound.files, selec, as.data.frame(t(x)))
   colnames(x)[1:2] <- c("sound.files", "selec")
   rownames(x) <- c(1:nrow(x))
@@ -289,3 +288,15 @@ hbeat$label2 <- factor(hbeat$label, labels=c('normal', 'murmur'))
 
 # Remove rows containing NA's.
 hbeat <- hbeat[complete.cases(hbeat),]
+
+
+library(reshape2)
+hbeat2 <- hbeat[,-(1:3)]
+hbeat2 <- hbeat2[,-30]
+hbeat3 <- melt(hbeat2)
+
+ggplot(data = melt(hbeat2), aes(x=variable, y=value)) + geom_boxplot(aes(fill=variable))
+
+ggplot(hbeat3) +
+  geom_boxplot(aes(x=variable,y=value,fill=label2))+
+  facet_wrap(~variable, scales="free")
