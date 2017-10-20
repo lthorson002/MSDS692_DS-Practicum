@@ -1,10 +1,10 @@
-# MSDS692_DS-Practicum
-Heart Sound Classification through Machine Learning
+# MSDS692_DS-Practicum**
+
+**Heart Sound Classification through Machine Learning**
+
 **Laurene Thorson**
 Regis University
 Denver, CO 80221
-
-**Heart Sound Classification through Machine Learning**
 
 **ABSTRACT**
 
