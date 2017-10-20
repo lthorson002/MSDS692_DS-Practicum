@@ -279,8 +279,8 @@ processFolder <- function(folderName) {
 
 #...Load data using the 3 Functions (SpectrumAnalyzehb, beat, processFolder )
 
-normal<- processFolder('D:/HeartBeatSounds/HB Data A/Normal')
-murmur <- processFolder('D:/HeartBeatSounds/HB Data A/Murmur')
+normal<- processFolder('D:/HeartBeatSounds/HB Data/Normal')
+murmur <- processFolder('D:/HeartBeatSounds/HB Data/Murmur')
 
 # Set labels.
 normal$label <- 1
