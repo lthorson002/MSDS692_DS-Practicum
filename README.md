@@ -22,6 +22,8 @@ using three machine learning techniques: K-nearest neighbors (KNN), Support
 Machine Vector (SVM), and Random Forest. Evaluation of the models resulted in
 the best classification results with SVM and caret optimization .
 
+**FOR MORE DETAILS... PLEASE READ THE FINAL PAPER AND GITHUB README FILE PROVIDED** 
+
 **KEYWORDS**
 
 Heartbeat, Sounds, Murmur, Machine Learning, k-Nearest Neighbors, SVM,
